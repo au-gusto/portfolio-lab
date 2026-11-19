@@ -1,18 +1,18 @@
 {
-  "atualizadoEm": "2026-11-18T03:18:28.531Z",
+  "atualizadoEm": "2026-11-19T02:55:57.922Z",
   "ativos": {
-    "ultimoPregao": "2026-11-17",
+    "ultimoPregao": "2026-11-18",
     "tickers": 89
   },
   "ibrx100": {
-    "ultimoPregao": "2026-11-17",
+    "ultimoPregao": "2026-11-18",
     "tickers": 100
   },
   "cdi": {
-    "ultimoDia": "16/11/2026"
+    "ultimoDia": "17/11/2026"
   },
   "ibov": {
-    "ultimoPregao": "2026-11-17"
+    "ultimoPregao": "2026-11-18"
   },
   "indicesMensais": {
     "ultimoMes": "2026-10"
@@ -20,59 +20,59 @@
   "tickersSemDados": [
     {
       "ticker": "AZUL4",
-      "ultimoPregaoReal": "2026-11-16"
+      "ultimoPregaoReal": "2026-11-17"
     },
     {
       "ticker": "BRFS3",
-      "ultimoPregaoReal": "2026-11-16"
+      "ultimoPregaoReal": "2026-11-17"
     },
     {
       "ticker": "CCRO3",
-      "ultimoPregaoReal": "2026-11-16"
-    },
-    {
-      "ticker": "CRFB3",
-      "ultimoPregaoReal": "2026-11-16"
+      "ultimoPregaoReal": "2026-11-17"
     },
     {
       "ticker": "CPLE6",
-      "ultimoPregaoReal": "2026-11-16"
+      "ultimoPregaoReal": "2026-11-17"
     },
     {
-      "ticker": "ELET3",
-      "ultimoPregaoReal": "2026-11-16"
+      "ticker": "CRFB3",
+      "ultimoPregaoReal": "2026-11-17"
     },
     {
       "ticker": "ELET6",
-      "ultimoPregaoReal": "2026-11-16"
+      "ultimoPregaoReal": "2026-11-17"
     },
     {
       "ticker": "EMBR3",
-      "ultimoPregaoReal": "2026-11-16"
+      "ultimoPregaoReal": "2026-11-17"
+    },
+    {
+      "ticker": "ELET3",
+      "ultimoPregaoReal": "2026-11-17"
     },
     {
       "ticker": "JBSS3",
-      "ultimoPregaoReal": "2026-11-16"
+      "ultimoPregaoReal": "2026-11-17"
     },
     {
       "ticker": "MRFG3",
-      "ultimoPregaoReal": "2026-11-16"
+      "ultimoPregaoReal": "2026-11-17"
     },
     {
       "ticker": "NTCO3",
-      "ultimoPregaoReal": "2026-11-16"
+      "ultimoPregaoReal": "2026-11-17"
     },
     {
       "ticker": "PETZ3",
-      "ultimoPregaoReal": "2026-11-16"
+      "ultimoPregaoReal": "2026-11-17"
     },
     {
       "ticker": "RAIZ4",
-      "ultimoPregaoReal": "2026-11-16"
+      "ultimoPregaoReal": "2026-11-17"
     },
     {
       "ticker": "STBP3",
-      "ultimoPregaoReal": "2026-11-16"
+      "ultimoPregaoReal": "2026-11-17"
     }
   ],
   "aposentados": []
