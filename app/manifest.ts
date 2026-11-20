@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 // Manifesto web: deixa o site "instalável" pelo navegador. O app das lojas é
-// o Capacitor (lojas/README.md). Ícones gerados por scripts/gerar-icones.mjs.
+// o Capacitor (README, seção "App Android e iOS"). Ícones gerados por scripts/gerar-icones.mjs.
 // Estático: o build do app (output: export) não tem servidor.
 export const dynamic = "force-static";
 

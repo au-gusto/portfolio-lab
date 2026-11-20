@@ -88,6 +88,6 @@ env/
 # ── App das lojas (Capacitor) ────────────────────────────────────────────────
 # Python baixado por scripts/baixar-pyodide.mjs (35 MB, refeito a cada build).
 /public/pyodide/
-# Chave de assinatura: NUNCA versionar (ver lojas/README.md, "Backup").
+# Chave de assinatura: NUNCA versionar.
 *.keystore
 *.jks

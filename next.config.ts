@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 // APP=1 gera o app das lojas: site exportado como arquivos estáticos em out/,
-// que o Capacitor empacota (ver capacitor.config.ts e lojas/README.md).
+// que o Capacitor empacota (ver capacitor.config.ts e o README).
 const app = !!process.env.APP;
 
 const nextConfig: NextConfig = app

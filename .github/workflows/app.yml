@@ -1,0 +1,137 @@
+# Gera o app (Android e iOS) e envia para teste nas lojas a cada mudança no
+# site: trilha interna da Google Play e TestFlight da Apple. Publicar para o
+# público continua sendo um clique em cada loja, depois da revisão delas.
+#
+# Desligado até as contas existirem: só roda com a variável do repositório
+# LOJAS_ATIVAS = true (Settings → Secrets and variables → Actions → Variables).
+# Secrets necessários: ver a tabela no fim deste arquivo.
+name: App (Android e iOS)
+
+on:
+  push:
+    branches: [main]
+    # Os commits diários de cotações não geram app novo: o app já busca os
+    # dados do dia pela internet.
+    paths-ignore:
+      - "public/Dados/**"
+      - "**.md"
+  workflow_dispatch:
+
+concurrency:
+  group: app-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VERSION_CODE: ${{ github.run_number }}
+
+jobs:
+  android:
+    if: vars.LOJAS_ATIVAS == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: npm ci
+      - run: npm run app:build
+
+      - name: Chave de upload
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: echo "$ANDROID_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+
+      - name: Gerar o .aab assinado
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/upload.jks
+          ANDROID_KEYSTORE_SENHA: ${{ secrets.ANDROID_KEYSTORE_SENHA }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_SENHA: ${{ secrets.ANDROID_KEY_SENHA }}
+        run: |
+          export VERSION_NAME="$(node -p "require('../package.json').version")"
+          ./gradlew bundleRelease
+
+      - name: Enviar para a trilha interna da Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ vars.APP_ID || 'br.com.portfoliolab.app' }}
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: internal
+          # "draft" enquanto o app nunca foi publicado (a Play recusa
+          # "completed" num app em rascunho); depois, LOJAS_STATUS = completed.
+          status: ${{ vars.LOJAS_STATUS || 'draft' }}
+
+  ios:
+    if: vars.LOJAS_ATIVAS == 'true'
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run app:build
+      - run: xcodebuild -version
+
+      - name: Chave da API do App Store Connect
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/asc"
+          printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/asc/AuthKey_$ASC_KEY_ID.p8"
+
+      - name: Arquivar e enviar ao TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          CHAVE=(-allowProvisioningUpdates
+                 -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey_$ASC_KEY_ID.p8"
+                 -authenticationKeyID "$ASC_KEY_ID"
+                 -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          VERSAO="$(node -p "require('./package.json').version")"
+
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="$VERSION_CODE" MARKETING_VERSION="$VERSAO" \
+            "${CHAVE[@]}" archive
+
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+          </dict></plist>
+          EOF
+
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" "${CHAVE[@]}"
+
+# Secrets (Settings → Secrets and variables → Actions):
+# | Nome                       | O que é                                                    |
+# |----------------------------|------------------------------------------------------------|
+# | ANDROID_KEYSTORE_B64       | a chave de upload (.jks) em base64 (base64 -w0 upload.jks)  |
+# | ANDROID_KEYSTORE_SENHA     | senha do arquivo .jks                                      |
+# | ANDROID_KEY_ALIAS          | alias da chave dentro do .jks                              |
+# | ANDROID_KEY_SENHA          | senha da chave                                             |
+# | PLAY_SERVICE_ACCOUNT_JSON  | JSON da conta de serviço com acesso de "Release" no app    |
+# | ASC_KEY_ID / ASC_ISSUER_ID | chave da API do App Store Connect (papel App Manager)      |
+# | ASC_KEY_P8                 | conteúdo do arquivo AuthKey_XXXX.p8                        |
+# | APPLE_TEAM_ID              | Team ID da conta da Apple (10 caracteres)                  |
+# Variáveis: LOJAS_ATIVAS (true liga), LOJAS_STATUS (draft|completed),
+# APP_ID (se a conta da UFG pedir outro id, ex.: br.ufg.portfoliolab).

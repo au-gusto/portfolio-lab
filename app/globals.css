@@ -2671,3 +2671,20 @@ body { padding-bottom: var(--seguro-baixo); }
 @media (max-width: 900px) {
   .gaveta-codigo { padding-top: calc(14px + var(--seguro-topo)); padding-bottom: calc(14px + var(--seguro-baixo)); }
 }
+
+/* ══ CARTEIRAS SALVAS ════════════════════════════════════════════════════════ */
+.carteiras__links { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; }
+.carteiras__link {
+  padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 12px; color: var(--texto-suave);
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.carteiras__link:hover { color: var(--texto); }
+.carteiras__link--destaque { color: var(--primaria); font-weight: 600; }
+
+/* Botão de compartilhar no topo do cartão do gráfico. */
+.compartilhar { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px;
+  border: 1px solid var(--borda); border-radius: 8px; background: var(--fundo-card);
+  color: var(--texto); font: inherit; font-size: 13px; cursor: pointer; }
+.compartilhar:hover { border-color: var(--primaria); color: var(--primaria); }
+.compartilhar:disabled { opacity: 0.5; cursor: progress; }

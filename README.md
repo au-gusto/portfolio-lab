@@ -76,6 +76,33 @@ Papel que sai do índice não é apagado — muda de base e continua simulável.
 para de receber pregão novo dois anos depois da saída; a data fica em
 `public/Dados/historico-indice.json`.
 
+## App Android e iOS
+
+O app das lojas é o próprio site exportado como arquivos estáticos e empacotado
+com o [Capacitor](https://capacitorjs.com), **com o Python dentro do pacote**:
+abre e simula sem internet desde a primeira vez. Com internet, busca as
+cotações do dia em `www.portfoliolab.com.br`; sem, usa as que vieram no app.
+
+```bash
+npm run app:build            # baixa o Pyodide (1ª vez), exporta para out/ e copia para android/ e ios/
+npm run app:build -- --teste # idem, sem exigir o contato da política (só para testar)
+npm run app:android          # abre no Android Studio (JDK 21 + SDK 36)
+npm run app:ios              # abre no Xcode 26 (só no Mac)
+```
+
+| Caminho | O que faz |
+| --- | --- |
+| `capacitor.config.ts` | Id e nome do app, pasta exportada (`out/`) |
+| `next.config.ts` | `APP=1` liga o export estático (`output: "export"`) |
+| `scripts/baixar-pyodide.mjs` | Copia o Pyodide e as bibliotecas para `public/pyodide/` (fora do git) |
+| `scripts/build-app.mjs` | O `app:build`: Python + export + `cap sync` |
+| `scripts/capturar-prints.mjs` | Prints das lojas (1080×1920 e 1290×2796) com o Chrome headless |
+| `android/`, `ios/` | Projetos nativos gerados pelo Capacitor |
+| `.github/workflows/app.yml` | Gera e envia o app (trilha interna da Play e TestFlight) |
+
+Para testar o build do app no navegador: `npx serve out` (ou
+`py -m http.server 4173 -d out`).
+
 ## Configuração no GitHub
 
 Para a Action conseguir commitar:

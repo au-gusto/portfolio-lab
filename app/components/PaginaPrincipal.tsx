@@ -20,6 +20,9 @@ import {
   carregar as carregarPrefs, salvar as salvarPrefs, padroes,
   type Preferencias, type EstrategiaUsuario,
 } from "../lib/preferencias";
+import * as carteirasLib from "../lib/carteiras";
+import type { Carteira } from "../lib/carteiras";
+import { compartilhar, imagemDoGrafico } from "../lib/compartilhar";
 import {
   cronometrar,
   anotar,
@@ -31,6 +34,7 @@ import {
 
 import Cabecalho from "./Cabecalho";
 import PainelConfiguracoes from "./PainelConfiguracoes";
+import SeletorCarteiras from "./SeletorCarteiras";
 import PainelEditores from "./PainelEditores";
 import StatusPython from "./StatusPython";
 import Icone from "./Icone";
@@ -188,15 +192,149 @@ export default function PaginaPrincipal({ tickersPorBase, estreiasPorBase, statu
   const [prefs, setPrefs] = useState<Preferencias>(padroes);
   const hidratado = useRef(false);
 
+  // Carteiras salvas (lib/carteiras.ts). A primeira abertura depois desta
+  // versão transforma a configuração que a pessoa já tinha em "Minha carteira".
+  const [carteiras, setCarteiras] = useState<Carteira[]>([]);
+
   useEffect(() => {
     ligarCapturadores();
-    setPrefs(carregarPrefs());
-    hidratado.current = true;
+    (async () => {
+      const p = await carregarPrefs();
+      let lista = await carteirasLib.listar();
+      if (!lista.length && p.ativos.length) {
+        const primeira = carteirasLib.nova("Minha carteira", p);
+        lista = [primeira];
+        p.carteiraAtual = primeira.id;
+        await carteirasLib.gravarLista(lista);
+      }
+      if (p.carteiraAtual && !lista.some((c) => c.id === p.carteiraAtual)) p.carteiraAtual = null;
+      setCarteiras(lista);
+      setPrefs(p);
+      hidratado.current = true;
+    })();
   }, []);
 
   useEffect(() => {
     if (hidratado.current) salvarPrefs(prefs);
   }, [prefs]);
+
+  const carteiraAtual = carteiras.find((c) => c.id === prefs.carteiraAtual);
+
+  function atualizarCarteiras(lista: Carteira[]) {
+    setCarteiras(lista);
+    carteirasLib.gravarLista(lista);
+  }
+
+  function abrirCarteira(id: string) {
+    const c = carteiras.find((x) => x.id === id);
+    if (!c) return;
+    // Mesmas regras de trocarBase: só ativos que existem na base e o piso de data dela.
+    const existentes = new Set(tickersPorBase[c.base] ?? []);
+    const ativos = c.ativos.filter((t) => existentes.has(t));
+    const piso = acharBase(c.base).inicioMinimo;
+    registrar("acao", `carteira aberta: ${c.nome}`, [
+      `${ativos.length} ativo(s) · base ${c.base}`,
+      ...(ativos.length < c.ativos.length ? [`sem dados nesta versão: ${c.ativos.filter((t) => !existentes.has(t)).join(", ")}`] : []),
+    ]);
+    setPrefs((p) => ({
+      ...p,
+      ...carteirasLib.conteudoDe({ ...p, ...c }),
+      ativos,
+      dataInicio: piso && p.dataInicio < piso ? piso : p.dataInicio,
+      carteiraAtual: c.id,
+    }));
+  }
+
+  function salvarCarteiraComo() {
+    const nome = window.prompt("Nome da carteira nova:", carteiraAtual ? `${carteiraAtual.nome} (cópia)` : "Minha carteira");
+    if (!nome?.trim()) return;
+    const c = carteirasLib.nova(nome, prefs);
+    atualizarCarteiras([...carteiras, c]);
+    setPrefs((p) => ({ ...p, carteiraAtual: c.id }));
+    registrar("acao", `carteira salva: ${c.nome}`);
+  }
+
+  function salvarCarteira() {
+    if (!carteiraAtual) return salvarCarteiraComo();
+    atualizarCarteiras(carteiras.map((c) =>
+      c.id === carteiraAtual.id ? { ...c, ...carteirasLib.conteudoDe(prefs), atualizadaEm: Date.now() } : c));
+    registrar("acao", `carteira atualizada: ${carteiraAtual.nome}`);
+  }
+
+  function renomearCarteira() {
+    if (!carteiraAtual) return;
+    const nome = window.prompt("Novo nome:", carteiraAtual.nome);
+    if (!nome?.trim()) return;
+    atualizarCarteiras(carteiras.map((c) => (c.id === carteiraAtual.id ? { ...c, nome: nome.trim().slice(0, 60) } : c)));
+  }
+
+  function apagarCarteira() {
+    if (!carteiraAtual) return;
+    if (!window.confirm(`Apagar a carteira "${carteiraAtual.nome}"? Os ativos na tela continuam; só o salvamento some.`)) return;
+    atualizarCarteiras(carteiras.filter((c) => c.id !== carteiraAtual.id));
+    setPrefs((p) => ({ ...p, carteiraAtual: null }));
+    registrar("acao", `carteira apagada: ${carteiraAtual.nome}`);
+  }
+
+  async function exportarCarteiras() {
+    await compartilhar({
+      titulo: "Carteiras do Portfolio Lab",
+      texto: "Backup das minhas carteiras do Portfolio Lab (abra no app em Carteira → Importar).",
+      arquivo: { nome: "carteiras-portfolio-lab.json", blob: new Blob([carteirasLib.exportar(carteiras)], { type: "application/json" }) },
+    });
+  }
+
+  const [compartilhando, setCompartilhando] = useState(false);
+
+  /**
+   * Imagem do gráfico principal + resumo em texto. Os números vêm dos próprios
+   * cartões do gráfico (o que a pessoa está vendo, já formatado no modo atual),
+   * só das séries visíveis.
+   */
+  async function compartilharResultado() {
+    const bloco = document.querySelector<HTMLElement>(".resultados .bloco-grafico");
+    if (!bloco) return;
+    setCompartilhando(true);
+    try {
+      const linhas = [...bloco.querySelectorAll(".serie-card:not(.serie-card--oculta)")].map((card) => ({
+        nome: card.querySelector(".serie-card__nome")?.textContent?.trim() ?? "",
+        valor: card.querySelector(".serie-card__valor")?.textContent?.trim() ?? "",
+        // Estratégia tem marca cheia; benchmark, tracejada (só a borda tem cor).
+        cor: ((cs) => (cs.backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)" ? cs.backgroundColor : cs.borderTopColor || cs.color))(
+          getComputedStyle(card.querySelector(".serie-card__marca") ?? card)),
+      })).filter((l) => l.nome && l.valor);
+      const periodo = configSimulacao ? `${dataBR(configSimulacao.dataInicio)} a ${dataBR(configSimulacao.dataFim)}` : "";
+      const titulo = modo === "aportes" ? "Evolução do patrimônio" : "Retorno acumulado";
+      const ativos = ativosUsados.length ? `Ativos: ${ativosUsados.join(", ")}` : "";
+      const texto = [
+        `Portfolio Lab · ${titulo}${periodo ? ` (${periodo})` : ""}`,
+        ...linhas.map((l) => `${l.nome}: ${l.valor}`),
+        ativos,
+        "Simulação educacional com dados do passado, não é recomendação de investimento.",
+        "https://www.portfoliolab.com.br",
+      ].filter(Boolean).join("\n");
+
+      const imagem = await imagemDoGrafico(bloco, linhas, `${titulo}${periodo ? ` · ${periodo}` : ""}`);
+      const r = await compartilhar({ titulo: "Portfolio Lab", texto, arquivo: { nome: "portfolio-lab.png", blob: imagem } });
+      registrar("acao", `resultado compartilhado (${r})`);
+      if (r === "baixado") window.alert("Imagem baixada e resumo copiado para a área de transferência.");
+    } catch (e) {
+      registrarErro("interface", "não consegui compartilhar o resultado", e instanceof Error ? e.message : String(e));
+    } finally {
+      setCompartilhando(false);
+    }
+  }
+
+  async function importarCarteiras(arquivo: File) {
+    try {
+      const { lista, vieram } = carteirasLib.importar(await arquivo.text(), carteiras);
+      atualizarCarteiras(lista);
+      window.alert(`${vieram} carteira(s) importada(s).`);
+    } catch (e) {
+      avisarProblema("acao", "arquivo de carteiras inválido", [e instanceof Error ? e.message : String(e)]);
+      window.alert("Esse arquivo não é um backup de carteiras do Portfolio Lab.");
+    }
+  }
 
   /**
    * Descreve uma mudança de preferência em uma linha.
@@ -691,6 +829,18 @@ export default function PaginaPrincipal({ tickersPorBase, estreiasPorBase, statu
              invisíveis. É o mesmo furo que a gaveta do celular já teve. */
           inert={lateralRecolhida}
         >
+          <SeletorCarteiras
+            carteiras={carteiras}
+            atual={carteiraAtual}
+            alterada={!!carteiraAtual && carteirasLib.alterada(carteiraAtual, prefs)}
+            onAbrir={abrirCarteira}
+            onSalvar={salvarCarteira}
+            onSalvarComo={salvarCarteiraComo}
+            onRenomear={renomearCarteira}
+            onApagar={apagarCarteira}
+            onExportar={exportarCarteiras}
+            onImportar={importarCarteiras}
+          />
           <PainelConfiguracoes
             tickers={tickers}
             base={base}
@@ -774,6 +924,12 @@ export default function PaginaPrincipal({ tickersPorBase, estreiasPorBase, statu
             </div>
           ) : (
             <>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                <button className="compartilhar" onClick={compartilharResultado} disabled={compartilhando}>
+                  <Icone nome="compartilhar" tamanho={15} />
+                  {compartilhando ? "Preparando…" : "Compartilhar"}
+                </button>
+              </div>
               {modo === "aportes" ? (
                 <Grafico_aportes
                   dados={resultados} config={configSimulacao}

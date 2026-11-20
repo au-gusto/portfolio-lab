@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Privacidade · Portfolio Lab" };
 const RESPONSAVEL = "";
 const EMAIL_CONTATO = "";
 
-const REPOSITORIO = "https://github.com/au-gusto/portfolioLab-Temp";
+const REPOSITORIO = "https://github.com/au-gusto/portfolio-lab";
 
 export default function Privacidade() {
   return (

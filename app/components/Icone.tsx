@@ -17,7 +17,7 @@ export type NomeIcone =
   | "alerta" | "info" | "check" | "carregando" | "expandir" | "recolher"
   | "percentual" | "patrimonio" | "sol" | "lua" | "adicionar" | "grafico"
   | "duplicar" | "lixeira" | "expandirTela" | "recolherLateral" | "expandirLateral"
-  | "executar" | "baixar";
+  | "executar" | "baixar" | "compartilhar";
 
 interface Props {
   nome: NomeIcone;
@@ -116,6 +116,7 @@ const CAMINHOS: Record<NomeIcone, React.ReactNode> = {
   lixeira: <path d="M4.5 6.5h15M9.5 6.5V4h5v2.5M6.5 6.5l.9 13.5h9.2l.9-13.5M10.5 10.5v6M13.5 10.5v6" />,
   executar: <path d="M7.5 5v14l11-7z" />,
   baixar: <path d="M12 4.5v10M7.5 10.5L12 15l4.5-4.5M4.5 19.5h15" />,
+  compartilhar: <path d="M12 15V4.5M7.5 9L12 4.5 16.5 9M5.5 12.5v7h13v-7" />,
 };
 
 export default function Icone({ nome, tamanho = 16, className }: Props) {
