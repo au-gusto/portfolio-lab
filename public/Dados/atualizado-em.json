@@ -1,18 +1,18 @@
 {
-  "atualizadoEm": "2026-11-21T02:58:37.395Z",
+  "atualizadoEm": "2026-11-24T05:44:28.954Z",
   "ativos": {
-    "ultimoPregao": "2026-11-19",
+    "ultimoPregao": "2026-11-23",
     "tickers": 89
   },
   "ibrx100": {
-    "ultimoPregao": "2026-11-19",
+    "ultimoPregao": "2026-11-23",
     "tickers": 100
   },
   "cdi": {
     "ultimoDia": "19/11/2026"
   },
   "ibov": {
-    "ultimoPregao": "2026-11-19"
+    "ultimoPregao": "2026-11-23"
   },
   "indicesMensais": {
     "ultimoMes": "2026-10"
@@ -23,11 +23,11 @@
       "ultimoPregaoReal": "2026-11-19"
     },
     {
-      "ticker": "CCRO3",
+      "ticker": "BRFS3",
       "ultimoPregaoReal": "2026-11-19"
     },
     {
-      "ticker": "BRFS3",
+      "ticker": "CCRO3",
       "ultimoPregaoReal": "2026-11-19"
     },
     {
@@ -39,15 +39,15 @@
       "ultimoPregaoReal": "2026-11-19"
     },
     {
-      "ticker": "ELET6",
-      "ultimoPregaoReal": "2026-11-19"
-    },
-    {
       "ticker": "ELET3",
       "ultimoPregaoReal": "2026-11-19"
     },
     {
       "ticker": "EMBR3",
+      "ultimoPregaoReal": "2026-11-19"
+    },
+    {
+      "ticker": "ELET6",
       "ultimoPregaoReal": "2026-11-19"
     },
     {
