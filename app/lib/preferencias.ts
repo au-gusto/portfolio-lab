@@ -3,7 +3,8 @@
  *
  * O que o navegador lembra entre visitas.
  *
- * Usamos localStorage, não cookie: cookie viaja em toda requisição e cabe
+ * Usamos localStorage (no app, o armazenamento nativo: lib/armazenamento.ts),
+ * não cookie: cookie viaja em toda requisição e cabe
  * ~4 KB, e as estratégias que o usuário escreve são código Python — passam
  * disso fácil. Nada aqui sai da máquina dele.
  *
@@ -15,6 +16,7 @@
 
 import { BASES, BASE_PADRAO } from "./catalogo-ativos";
 import { registrar, avisarProblema } from "./diagnostico";
+import { ler, gravar } from "./armazenamento";
 
 const CHAVE = "portfolio-lab:v1";
 
@@ -42,6 +44,8 @@ export interface Preferencias {
   usarOrcamento: boolean;
   orcamento: Record<string, number>;
   estrategiasUsuario: EstrategiaUsuario[];
+  /** Carteira salva aberta agora (ver lib/carteiras.ts), ou null. */
+  carteiraAtual: string | null;
 }
 
 /** Fim = hoje; início = um ano atrás. */
@@ -70,6 +74,7 @@ export function padroes(): Preferencias {
     usarOrcamento: false,
     orcamento: {},
     estrategiasUsuario: [],
+    carteiraAtual: null,
   };
 }
 
@@ -78,7 +83,7 @@ function ehTexto(v: unknown): v is string {
 }
 
 /** Aceita só o que tem o formato esperado; o resto volta ao padrão. */
-function sanear(bruto: unknown): Preferencias {
+export function sanear(bruto: unknown): Preferencias {
   const p = padroes();
   if (!bruto || typeof bruto !== "object") return p;
   const g = bruto as Record<string, unknown>;
@@ -99,6 +104,7 @@ function sanear(bruto: unknown): Preferencias {
     if (typeof v === "number" && Number.isFinite(v) && v >= 0) p[chave] = v;
   }
 
+  if (ehTexto(g.carteiraAtual)) p.carteiraAtual = g.carteiraAtual;
   if (typeof g.usarOrcamento === "boolean") p.usarOrcamento = g.usarOrcamento;
   if (g.orcamento && typeof g.orcamento === "object") {
     const saida: Record<string, number> = {};
@@ -125,10 +131,10 @@ function sanear(bruto: unknown): Preferencias {
   return p;
 }
 
-export function carregar(): Preferencias {
+export async function carregar(): Promise<Preferencias> {
   if (typeof window === "undefined") return padroes();
   try {
-    const bruto = window.localStorage.getItem(CHAVE);
+    const bruto = await ler(CHAVE);
     if (!bruto) {
       registrar("sistema", "primeira visita: usando a configuração padrão");
       return padroes();
@@ -151,10 +157,10 @@ export function carregar(): Preferencias {
   }
 }
 
-export function salvar(p: Preferencias) {
+export async function salvar(p: Preferencias) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(CHAVE, JSON.stringify(p));
+    await gravar(CHAVE, JSON.stringify(p));
   } catch (e) {
     // Navegação privada ou cota estourada: a sessão continua funcionando,
     // só não sobrevive ao recarregamento.
